@@ -64,6 +64,10 @@ public class HttpSourceConnector extends SourceConnector {
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
         List<Map<String, String>> taskConfigs = new ArrayList<>();
+        if (settings == null) {
+            taskConfigs.add(null);
+            return taskConfigs;
+        }
 
         String indexIncludeList = settings.get(HttpSourceConnectorConfig.INDEX_INCLUDE_LIST);
         if (null == indexIncludeList) {

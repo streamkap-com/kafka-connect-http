@@ -15,6 +15,7 @@
     "kafka.topic.template": "true",
     "http.timer.interval.millis": "0",
     "http.timer.catchup.interval.millis": "0",
-    "http.client.read.timeout.millis": "0"
+    "http.client.read.timeout.millis": "0",
+    "index.include.list": "test"
   }
 }

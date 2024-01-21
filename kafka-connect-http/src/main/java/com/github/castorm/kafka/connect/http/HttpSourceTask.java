@@ -49,7 +49,7 @@ public class HttpSourceTask extends SourceTask {
             taskSettings.putAll(settings);
             taskSettings.put(TemplateHttpRequestFactoryConfig.URL, originalUrl.replace("<INDEX>", index));
             HttpSourceTaskSingleIndex task = new HttpSourceTaskSingleIndex(this.configFactory);
-            task.start(taskSettings);
+            task.start(context, taskSettings);
             tasks.put(index, task);
         }
     }

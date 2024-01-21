@@ -44,12 +44,12 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.offset;
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.offsetInitialMap;
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.offsetMap;
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.record;
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.request;
-import static com.github.castorm.kafka.connect.http.HttpSourceTaskTest.Fixture.response;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.offset;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.offsetInitialMap;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.offsetMap;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.record;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.request;
+import static com.github.castorm.kafka.connect.http.HttpSourceTaskSingleIndexTest.Fixture.response;
 import static java.time.Instant.now;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
@@ -59,13 +59,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class HttpSourceTaskTest {
+class HttpSourceTaskSingleIndexTest {
 
-    HttpSourceTask task;
+    HttpSourceTaskSingleIndex task;
 
     @Mock
     HttpSourceConnectorConfig config;
@@ -90,7 +89,7 @@ class HttpSourceTaskTest {
 
     @BeforeEach
     void setUp() {
-        task = new HttpSourceTask(__ -> config);
+        task = new HttpSourceTaskSingleIndex(__ -> config);
     }
 
     private void givenTaskConfiguration() {
@@ -112,21 +111,17 @@ class HttpSourceTaskTest {
 
     @Test
     void givenTaskNotPolled_whenCommit_thenNoException() {
-
         givenTaskConfiguration();
-        task.initialize(getContext(emptyMap()));
-        task.start(emptyMap());
+        task.start(getContext(emptyMap()), emptyMap());
 
         task.commit();
     }
 
     @Test
     void givenTaskInitializedWithRestoredOffset_whenStart_thenLastOffsetIsRestored() {
-
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
 
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
 
         assertThat(task.getOffset()).isEqualTo(Offset.of(offsetMap));
     }
@@ -136,9 +131,8 @@ class HttpSourceTaskTest {
 
         givenTaskConfiguration();
         given(config.getInitialOffset()).willReturn(offsetInitialMap);
-        task.initialize(getContext(emptyMap()));
 
-        task.start(emptyMap());
+        task.start(getContext(emptyMap()), emptyMap());
 
         assertThat(task.getOffset()).isEqualTo(Offset.of(offsetInitialMap));
     }
@@ -147,9 +141,8 @@ class HttpSourceTaskTest {
     void givenTaskInitialized_whenStart_thenGetPollIntervalMillis() {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
 
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
 
         then(config).should().getThrottler();
     }
@@ -158,9 +151,8 @@ class HttpSourceTaskTest {
     void givenTaskInitialized_whenStart_thenGetRequestFactory() {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
 
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
 
         then(config).should().getRequestFactory();
     }
@@ -169,9 +161,8 @@ class HttpSourceTaskTest {
     void givenTaskInitialized_whenStart_thenGetClient() {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
 
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
 
         then(config).should().getClient();
     }
@@ -180,9 +171,8 @@ class HttpSourceTaskTest {
     void givenTaskInitialized_whenStart_thenGetResponseParser() {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
 
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
 
         then(config).should().getResponseParser();
     }
@@ -191,8 +181,7 @@ class HttpSourceTaskTest {
     void givenTaskStarted_whenPoll_thenThrottled() throws InterruptedException, IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willReturn(response);
         given(responseParser.parse(response)).willReturn(asList(record(offsetMap)));
@@ -207,8 +196,7 @@ class HttpSourceTaskTest {
     void givenTaskStarted_whenPoll_thenResultsReturned() throws InterruptedException, IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willReturn(response);
         given(responseParser.parse(response)).willReturn(asList(record(offsetMap)));
@@ -222,8 +210,7 @@ class HttpSourceTaskTest {
     void givenTaskStarted_whenPoll_thenResultsSorted() throws InterruptedException, IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willReturn(response);
         given(responseParser.parse(response)).willReturn(asList(record(offsetMap)));
@@ -237,8 +224,7 @@ class HttpSourceTaskTest {
     void givenTaskStarted_whenPoll_thenFilterFilters() throws InterruptedException, IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willReturn(response);
         given(responseParser.parse(response)).willReturn(asList(record(offsetMap)));
@@ -251,8 +237,7 @@ class HttpSourceTaskTest {
     void givenTaskStarted_whenPollAndCommitRecords_thenOffsetUpdated() throws InterruptedException, IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willReturn(response);
         given(responseParser.parse(response)).willReturn(asList(record(offsetMap)));
@@ -273,8 +258,7 @@ class HttpSourceTaskTest {
     void givenTaskStartedAndExecuteFails_whenPoll_thenRetriableException() throws IOException {
 
         givenTaskConfiguration();
-        task.initialize(getContext(offsetMap));
-        task.start(emptyMap());
+        task.start(getContext(offsetMap), emptyMap());
         given(requestFactory.createRequest(offset)).willReturn(request);
         given(client.execute(request)).willThrow(new IOException());
 
