@@ -60,7 +60,7 @@ class StreamkapElasticConnectorTest {
 
         HttpSourceConnector connector = new HttpSourceConnector();
         Map<String, String> props = new HashMap<>();
-        props.put("http.response.record.offset.pointer", "key=/_id, timestamp=/sort/0, endpoint=/_index");
+        props.put("http.response.record.offset.pointer", "key=/_id, timestamp=/sort/0, index=/_index");
         props.put("http.request.body", "{\"size\": 100, \"sort\": [{\"my_timestamp\": \"asc\"}], \"search_after\": [${offset.timestamp?datetime.iso?long}]}");
         props.put("http.request.url", opensearch.getHttpHostAddress() + "/" + HttpSourceConnectorConfig.URL_ENDPOINT_PLACEHOLDER + "/_search");
         props.put("http.response.record.pointer", "/_source");
