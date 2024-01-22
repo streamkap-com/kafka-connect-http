@@ -43,7 +43,9 @@ public class SchemedKvSourceRecordMapper implements KvSourceRecordMapper {
     private static final String KEY_FIELD_NAME = "key";
     private static final String VALUE_FIELD_NAME = "value";
     private static final String TIMESTAMP_FIELD_NAME = "timestamp";
-    private static final String ENDPOINT_FIELD_NAME = "endpoint";
+    // TODO change ednpoint field name (maybe create new Mapper or introduce env variable
+    //  or extend current class with a specific implementation) - objective is to make mapper abstract and not coupled to specific impl
+    private static final String ENDPOINT_FIELD_NAME = "index";
 
     private final Function<Map<String, ?>, SourceRecordMapperConfig> configFactory;
 

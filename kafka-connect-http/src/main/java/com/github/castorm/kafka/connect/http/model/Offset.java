@@ -38,7 +38,8 @@ public class Offset {
 
     private static final String TIMESTAMP_KEY = "timestamp";
 
-    private static final String ENDPOINT_KEY = "endpoint";
+    // TODO think of how to make offset more abstract regarding index/endpoint
+    private static final String ENDPOINT_KEY = "index";
 
     private final Map<String, ?> properties;
 
