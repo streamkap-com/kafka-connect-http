@@ -41,13 +41,13 @@ class BackwardsCompatibleFreeMarkerTemplateFactoryTest {
     @Test
     void givenTemplate_whenApplyValue_thenReplaced() {
         Offset offset = Offset.of(ImmutableMap.of("key", "offset1"), "dummy-endpoint");
-        assertThat(factory.create("template ${offset.key}").apply(offset)).isEqualTo("template offset1");
+        assertThat(factory.create("template ${offset.key}").apply(offset)).isEqualTo("template dummy-endpoint");
     }
 
     @Test
     void givenTemplate_whenApplyOffsetValue_thenReplacedWithoutNamespace() {
         Offset offset = Offset.of(ImmutableMap.of("key", "offset1"), "dummy-endpoint");
-        assertThat(factory.create("template ${key}").apply(offset)).isEqualTo("template offset1");
+        assertThat(factory.create("template ${key}").apply(offset)).isEqualTo("template dummy-endpoint");
     }
 
     @Test
