@@ -21,6 +21,7 @@ package com.github.castorm.kafka.connect.http.record;
  */
 
 import com.github.castorm.kafka.connect.http.model.Offset;
+import com.github.castorm.kafka.connect.http.model.Partition;
 import com.github.castorm.kafka.connect.http.record.model.KvRecord;
 import com.github.castorm.kafka.connect.http.record.spi.KvSourceRecordMapper;
 import lombok.RequiredArgsConstructor;
@@ -40,11 +41,11 @@ import static org.apache.kafka.connect.data.SchemaBuilder.string;
 @RequiredArgsConstructor
 public class SchemedKvSourceRecordMapper implements KvSourceRecordMapper {
 
-    private static final String KEY_FIELD_NAME = "key";
-    private static final String VALUE_FIELD_NAME = "value";
-    private static final String TIMESTAMP_FIELD_NAME = "timestamp";
-
-    private static Map<String, ?> sourcePartition = emptyMap();
+    private static final String KEY_FIELD_NAME = "_streamkap_key";
+    private static final String VALUE_FIELD_NAME = "_streamkap_value";
+    private static final String TIMESTAMP_FIELD_NAME = "_streamkap_timestamp";
+    // TODO change ednpoint field name (maybe create new Mapper or extend current class with a specific implementation)
+    private static final String ENDPOINT_FIELD_NAME = "_streamkap_index";
 
     private final Function<Map<String, ?>, SourceRecordMapperConfig> configFactory;
 
@@ -69,23 +70,25 @@ public class SchemedKvSourceRecordMapper implements KvSourceRecordMapper {
                 .name("com.github.castorm.kafka.connect.http.Value").doc("Message Value")
                 .field(VALUE_FIELD_NAME, string().doc("HTTP Record Value").build())
                 .field(KEY_FIELD_NAME, string().optional().doc("HTTP Record Key").build())
+                .field(ENDPOINT_FIELD_NAME, string().optional().doc("HTTP Record Value Endpoint").build())
                 .field(TIMESTAMP_FIELD_NAME, int64().optional().doc("HTTP Record Timestamp").build())
                 .build();
     }
 
     @Override
-    public SourceRecord map(KvRecord record) {
+    public SourceRecord map(String endpoint, KvRecord record) {
 
         Offset offset = record.getOffset();
         Long timestamp = offset.getTimestamp().map(Instant::toEpochMilli).orElseGet(System::currentTimeMillis);
 
         Struct key = keyStruct(record.getKey());
-        Struct value = valueStruct(record.getKey(), record.getValue(), timestamp);
+        Struct value = valueStruct(record.getKey(), record.getValue(), timestamp, endpoint);
+        Map<String, ?> sourcePartition = Partition.getPartition(endpoint);
 
         return new SourceRecord(
                 sourcePartition,
                 offset.toMap(),
-                config.getTopic(),
+                config.getTopicName(endpoint),
                 null,
                 key.schema(),
                 key,
@@ -98,10 +101,11 @@ public class SchemedKvSourceRecordMapper implements KvSourceRecordMapper {
         return new Struct(keySchema).put(KEY_FIELD_NAME, key);
     }
 
-    private Struct valueStruct(String key, String value, Long timestamp) {
+    private Struct valueStruct(String key, String value, Long timestamp, String endpoint) {
         return new Struct(valueSchema)
                 .put(KEY_FIELD_NAME, key)
                 .put(VALUE_FIELD_NAME, value)
-                .put(TIMESTAMP_FIELD_NAME, timestamp);
+                .put(TIMESTAMP_FIELD_NAME, timestamp)
+                .put(ENDPOINT_FIELD_NAME, endpoint);
     }
 }

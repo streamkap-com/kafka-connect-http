@@ -57,9 +57,23 @@ class HttpSourceConnectorIT {
     }
 
     @Test
-    void validateConnector1() {
-
+    void validateConnectorWithKafkaTemplateConfig() {
         Map<String, String> config = getConfigMap(replaceVariables(readFileFromClasspath("connectors/connector1.json"), properties));
+
+        List<SourceRecord> records = readAllRecords(config);
+
+        assertThat(records).hasSize(2);
+        assertThat(records).extracting(SourceRecord::topic).containsExactly("topic-name1", "topic-name2");
+        assertThat(records).extracting(record -> (String) record.sourceOffset().get("key")).containsExactly("TICKT-0002", "TICKT-0003");
+        assertThat(records).extracting(record -> (String) record.sourceOffset().get("timestamp")).containsExactly("2020-01-01T00:00:02Z", "2020-01-01T00:00:03Z");
+        assertThat(records).extracting(record -> (String) record.sourceOffset().get("endpoint")).containsExactly("topic-name1", "topic-name2");
+        assertThat(records).extracting(record -> record.value().toString()).containsExactly("Struct{_streamkap_value={\"id\":\"2\",\"key\":\"TICKT-0002\",\"fields\":{\"summary\":\"My first ticket\",\"created\":\"2020-01-01T00:00:02.000+0000\",\"updated\":\"2020-01-01T00:00:02.000+0000\",\"_index\":\"topic-name1\"}},_streamkap_key=TICKT-0002,_streamkap_index=topic-name1,_streamkap_timestamp=1577836802000}", "Struct{_streamkap_value={\"id\":\"3\",\"key\":\"TICKT-0003\",\"fields\":{\"summary\":\"My first ticket\",\"created\":\"2020-01-01T00:00:03.000+0000\",\"updated\":\"2020-01-01T00:00:03.000+0000\",\"_index\":\"topic-name2\"}},_streamkap_key=TICKT-0003,_streamkap_index=topic-name2,_streamkap_timestamp=1577836803000}");
+    }
+
+    @Test
+    void validateConnectorWithoutKafkaTemplateConfig() {
+
+        Map<String, String> config = getConfigMap(replaceVariables(readFileFromClasspath("connectors/connector2.json"), properties));
 
         List<SourceRecord> records = readAllRecords(config);
 

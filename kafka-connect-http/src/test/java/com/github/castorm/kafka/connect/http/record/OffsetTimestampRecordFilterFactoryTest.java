@@ -30,6 +30,7 @@ import java.time.Instant;
 
 import static com.github.castorm.kafka.connect.http.record.OffsetTimestampRecordFilterFactoryTest.Fixture.key;
 import static com.github.castorm.kafka.connect.http.record.OffsetTimestampRecordFilterFactoryTest.Fixture.now;
+import static com.github.castorm.kafka.connect.http.record.OffsetTimestampRecordFilterFactoryTest.Fixture.endpoint;
 import static com.github.castorm.kafka.connect.http.record.OffsetTimestampRecordFilterFactoryTest.Fixture.record;
 import static edu.emory.mathcs.backport.java.util.Collections.emptyMap;
 import static java.time.Instant.now;
@@ -54,6 +55,8 @@ class OffsetTimestampRecordFilterFactoryTest {
     interface Fixture {
         String key = "key";
         Instant now = now();
+
+        String endpoint = "endpoint";
 
         static SourceRecord record(Instant timestamp) {
             return new SourceRecord(null, null, null, null, null, null, null, null, timestamp.toEpochMilli());

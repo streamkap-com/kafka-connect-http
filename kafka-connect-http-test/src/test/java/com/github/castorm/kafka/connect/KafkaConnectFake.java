@@ -21,7 +21,7 @@ package com.github.castorm.kafka.connect;
  */
 
 import com.github.castorm.kafka.connect.http.HttpSourceConnector;
-import com.github.castorm.kafka.connect.http.HttpSourceTask;
+import com.github.castorm.kafka.connect.http.HttpSourceTaskSingleEndpoint;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -53,7 +53,7 @@ public class KafkaConnectFake {
 
     @SneakyThrows
     private static List<SourceRecord> runTaskUntilExhaust(Map<String, String> config) {
-        HttpSourceTask task = new HttpSourceTask();
+        HttpSourceTaskSingleEndpoint task = new HttpSourceTaskSingleEndpoint("dummy");
         task.initialize(emptyContext());
         task.start(config);
         List<SourceRecord> allRecords = new ArrayList<>();

@@ -59,7 +59,7 @@ class PolicyHttpResponseParserConfigTest {
     public static class TestResponseParser implements HttpResponseParser {
 
         @Override
-        public List<SourceRecord> parse(HttpResponse response) {
+        public List<SourceRecord> parse(String endpoint, HttpResponse response) {
             return null;
         }
     }
@@ -73,6 +73,7 @@ class PolicyHttpResponseParserConfigTest {
     private static PolicyHttpResponseParserConfig config(Map<String, Object> settings) {
         Map<String, Object> defaultSettings = new HashMap<String, Object>() {{
             put("kafka.topic", "topic");
+            put("kafka.topic.template", "false");
         }};
         defaultSettings.putAll(settings);
         return new PolicyHttpResponseParserConfig(defaultSettings);

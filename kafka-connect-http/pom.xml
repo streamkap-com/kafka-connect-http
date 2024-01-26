@@ -52,6 +52,12 @@
             <groupId>com.joestelmach</groupId>
             <artifactId>natty</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+        </dependency>
+
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -78,6 +84,12 @@
             <artifactId>guava</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.opensearch</groupId>
+            <artifactId>opensearch-testcontainers</artifactId>
+            <version>2.0.1</version>
+            <scope>test</scope>
+        </dependency>        
     </dependencies>
 
     <profiles>
@@ -306,8 +318,25 @@
                         </reports>
                     </reportSet>
                 </reportSets>
-            </plugin>
+            </plugin>           
         </plugins>
     </reporting>
-
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.0.2</version>
+        <executions>
+            <execution>
+                <id>default-jar</id>
+                <phase>none</phase>
+                <configuration>
+                    <finalName>unwanted</finalName>
+                    <classifier>unwanted</classifier>
+                </configuration>
+            </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

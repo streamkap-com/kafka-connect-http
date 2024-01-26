@@ -133,7 +133,7 @@ class HttpSourceConnectorConfigTest {
     }
 
     public static class TestResponseParser implements HttpResponseParser {
-        public List<SourceRecord> parse(HttpResponse response) {
+        public List<SourceRecord> parse(String endpoint, HttpResponse response) {
             return null;
         }
     }
@@ -148,6 +148,7 @@ class HttpSourceConnectorConfigTest {
         static Map<String, String> defaultMap() {
             return new HashMap<String, String>() {{
                 put("kafka.topic", "topic");
+                put("kafka.topic.template", "false");
                 put("http.request.url", "foo");
                 put("http.response.json.record.offset.value.pointer", "/baz");
             }};

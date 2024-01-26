@@ -70,12 +70,13 @@ class KvHttpResponseParserConfigTest {
     public static class TestRecordMapper implements KvSourceRecordMapper {
 
         @Override
-        public SourceRecord map(KvRecord record) { return null; }
+        public SourceRecord map(String endpoint, KvRecord record) { return null; }
     }
 
     private static KvHttpResponseParserConfig config(Map<String, Object> settings) {
         Map<String, Object> defaultSettings = new HashMap<String, Object>() {{
             put("kafka.topic", "topic");
+            put("kafka.topic.template", "false");
         }};
         defaultSettings.putAll(settings);
         return new KvHttpResponseParserConfig(defaultSettings);

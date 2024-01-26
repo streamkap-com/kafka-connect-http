@@ -1,5 +1,7 @@
 package com.github.castorm.kafka.connect.http;
 
+import org.apache.commons.collections4.ListUtils;
+
 /*-
  * #%L
  * kafka-connect-http
@@ -21,6 +23,7 @@ package com.github.castorm.kafka.connect.http;
  */
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
@@ -30,6 +33,10 @@ import java.util.Map;
 import static com.github.castorm.kafka.connect.common.VersionUtils.getVersion;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 
 public class HttpSourceConnector extends SourceConnector {
 
@@ -57,9 +64,35 @@ public class HttpSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(int maxTasks) {
-        return range(0, maxTasks).boxed()
-                .map(__ -> settings)
-                .collect(toList());
+        if (settings == null) {
+            return Collections.singletonList(null);
+        }
+        List<Map<String, String>> taskConfigs = new ArrayList<>();
+
+        String endpointIncludeList = settings.get(HttpSourceConnectorConfig.ENDPOINT_INCLUDE_LIST);
+        if (null == endpointIncludeList) {
+            endpointIncludeList = HttpSourceConnectorConfig.DEFAULT_ENDPOINT;
+        }
+        List<String> endpoints = List.of(endpointIncludeList.split(","));
+        List<List<String>> tasksEndpointIncludeLists = new ArrayList<>();
+        for (int i = 0; i < maxTasks; i++) {
+            tasksEndpointIncludeLists.add(new ArrayList<>());
+        }
+        for (int i = 0; i < endpoints.size(); i++) {
+            String endpoint = endpoints.get(i);
+            tasksEndpointIncludeLists.get(i % maxTasks).add(endpoint);
+        }
+
+        for (int i = 0; i < maxTasks; i++) {
+            Map<String, String> taskSettings = new HashMap<>();
+            taskSettings.putAll(settings);
+            List<String> taskEndpointes = tasksEndpointIncludeLists.size() <= i ? List.of() : tasksEndpointIncludeLists.get(i);
+            taskSettings.put(HttpSourceConnectorConfig.ENDPOINT_INCLUDE_LIST,
+                    String.join(",", taskEndpointes));
+            taskConfigs.add(taskSettings);
+        }
+
+        return taskConfigs;
     }
 
     @Override

@@ -53,7 +53,7 @@ class OffsetRecordFilterFactoryTest {
 
     @Test
     void givenNotSeen_whenCreateAndTest_thenFalse() {
-        assertThat(factory.create(Offset.of(ImmutableMap.of("i", 5))).test(record(3))).isFalse();
+        assertThat(factory.create(Offset.of(ImmutableMap.of("i", 5), "dummy-endpoint")).test(record(3))).isFalse();
     }
 
     @Test
@@ -67,8 +67,8 @@ class OffsetRecordFilterFactoryTest {
     }
 
     interface Fixture {
-        static SourceRecord record(int index) {
-            return new SourceRecord(null, ImmutableMap.of("i", index), null, null, null, null, null, null, 0L);
+        static SourceRecord record(int endpoint) {
+            return new SourceRecord(null, ImmutableMap.of("i", endpoint), null, null, null, null, null, null, 0L);
         }
     }
 }
