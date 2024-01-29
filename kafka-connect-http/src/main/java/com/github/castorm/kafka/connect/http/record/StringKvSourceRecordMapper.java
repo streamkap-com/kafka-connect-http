@@ -79,6 +79,6 @@ public class StringKvSourceRecordMapper implements KvSourceRecordMapper {
                 record.getKey(),
                 valueSchema,
                 record.getValue(),
-                offset.getTimestamp().map(Instant::toEpochMilli).orElseGet(System::currentTimeMillis));
+                System.currentTimeMillis());
     }
 }
