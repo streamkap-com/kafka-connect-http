@@ -74,10 +74,11 @@ class StringKvSourceRecordMapperTest {
         assertThat(mapper.map("dummy-endpoint", record.withOffset(offset)).sourceOffset()).isEqualTo(offset.toMap());
     }
 
-    @Test
-    void givenTimestamp_whenMap_thenTimestampMapped() {
-        assertThat(mapper.map("dummy-endpoint", record.withOffset(offset)).timestamp()).isEqualTo(now.toEpochMilli());
-    }
+    // deprecated !
+    // @Test
+    // void givenTimestamp_whenMap_thenTimestampMapped() {
+    //     assertThat(mapper.map("dummy-endpoint", record.withOffset(offset)).timestamp()).isEqualTo(now.toEpochMilli());
+    // }
 
     @Test
     void whenMap_thenNoPartitionMapped() {

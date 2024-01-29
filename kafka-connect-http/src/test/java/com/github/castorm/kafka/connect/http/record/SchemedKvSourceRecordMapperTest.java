@@ -87,7 +87,9 @@ class SchemedKvSourceRecordMapperTest {
 
     @Test
     void givenTimestamp_whenMap_thenTimestampMapped() {
-        assertThat(mapper.map("dummy-endpoint", record.withOffset(offset)).timestamp()).isEqualTo(now.toEpochMilli());
+        Struct value = (Struct) mapper.map("dummy-endpoint", record.withOffset(offset)).value();
+        Object valueTimestamp = (long) value.get(SchemedKvSourceRecordMapper.TIMESTAMP_FIELD_NAME);
+        assertThat(((Long) valueTimestamp)).isEqualTo(now.toEpochMilli());
     }
 
     @Test
