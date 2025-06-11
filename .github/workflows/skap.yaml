@@ -1,6 +1,12 @@
 name: Java CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - streamkap-main
+  pull_request:
+    branches:
+      - streamkap-main
 
 jobs:
   test-and-build:
