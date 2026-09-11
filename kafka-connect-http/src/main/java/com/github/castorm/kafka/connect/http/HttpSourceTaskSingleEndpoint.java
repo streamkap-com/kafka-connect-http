@@ -25,6 +25,7 @@ import com.github.castorm.kafka.connect.http.client.spi.HttpClient;
 import com.github.castorm.kafka.connect.http.model.HttpRequest;
 import com.github.castorm.kafka.connect.http.model.HttpResponse;
 import com.github.castorm.kafka.connect.http.model.Offset;
+import com.github.castorm.kafka.connect.http.metrics.SourceLag;
 import com.github.castorm.kafka.connect.http.model.Partition;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordFilterFactory;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordSorter;
@@ -79,6 +80,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
     @Getter
     private String endpoint;
 
+    private SourceLag sourceLag;
 
     HttpSourceTaskSingleEndpoint(String endpoint, Function<Map<String, String>, HttpSourceConnectorConfig> configFactory) {
         this.configFactory = configFactory;
@@ -101,6 +103,10 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         recordSorter = config.getRecordSorter();
         recordFilterFactory = config.getRecordFilterFactory();
         offset = loadOffset(this.context, config.getInitialOffset());
+
+        // ENG-2661. Reads the live offset on each scrape, so no updates need pushing.
+        sourceLag = new SourceLag(settings.get("name"), endpoint, () -> offset.getTimestamp());
+        sourceLag.register();
     }
 
     private Offset loadOffset(SourceTaskContext context, Map<String, String> initialOffset) {
@@ -160,7 +166,9 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     @Override
     public void stop() {
-        // Nothing to do, no resources to release
+        if (sourceLag != null) {
+            sourceLag.unregister();
+        }
     }
 
     public String version() {
