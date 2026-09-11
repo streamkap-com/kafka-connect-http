@@ -25,6 +25,7 @@ import com.github.castorm.kafka.connect.http.client.spi.HttpClient;
 import com.github.castorm.kafka.connect.http.model.HttpRequest;
 import com.github.castorm.kafka.connect.http.model.HttpResponse;
 import com.github.castorm.kafka.connect.http.model.Offset;
+import com.github.castorm.kafka.connect.http.metrics.SourceLag;
 import com.github.castorm.kafka.connect.http.model.Partition;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordFilterFactory;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordSorter;
@@ -79,6 +80,8 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
     @Getter
     private String endpoint;
 
+    private SourceLag sourceLag;
+
     HttpSourceTaskSingleEndpoint(String endpoint, Function<Map<String, String>, HttpSourceConnectorConfig> configFactory) {
         this.configFactory = configFactory;
         this.endpoint = endpoint;
@@ -100,13 +103,17 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         recordSorter = config.getRecordSorter();
         recordFilterFactory = config.getRecordFilterFactory();
         offset = loadOffset(this.context, config.getInitialOffset());
+
+        // ENG-2661. Reads the live offset on each scrape, so no updates need pushing.
+        sourceLag = new SourceLag(settings.get("name"), endpoint, () -> offset.getTimestamp());
+        sourceLag.register();
     }
 
     private Offset loadOffset(SourceTaskContext context, Map<String, String> initialOffset) {
         Map<String, Object> restoredOffset = ofNullable(
             context.offsetStorageReader().offset(
                 Partition.getPartition(endpoint))).orElseGet(Collections::emptyMap);
-        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset, endpoint);
+        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset);
     }
 
     @Override
@@ -151,7 +158,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     public void commit() {
         offset = confirmationWindow.getLowWatermarkOffset()
-                .map(props -> Offset.of(props, this.endpoint))
+                .map(Offset::of)
                 .orElse(offset);
 
         log.debug("Offset set to {}", offset);
@@ -159,7 +166,9 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     @Override
     public void stop() {
-        // Nothing to do, no resources to release
+        if (sourceLag != null) {
+            sourceLag.unregister();
+        }
     }
 
     public String version() {
