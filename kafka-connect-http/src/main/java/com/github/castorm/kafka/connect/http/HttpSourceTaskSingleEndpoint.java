@@ -79,6 +79,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
     @Getter
     private String endpoint;
 
+
     HttpSourceTaskSingleEndpoint(String endpoint, Function<Map<String, String>, HttpSourceConnectorConfig> configFactory) {
         this.configFactory = configFactory;
         this.endpoint = endpoint;
@@ -106,7 +107,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         Map<String, Object> restoredOffset = ofNullable(
             context.offsetStorageReader().offset(
                 Partition.getPartition(endpoint))).orElseGet(Collections::emptyMap);
-        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset, endpoint);
+        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset);
     }
 
     @Override
@@ -151,7 +152,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     public void commit() {
         offset = confirmationWindow.getLowWatermarkOffset()
-                .map(props -> Offset.of(props, this.endpoint))
+                .map(Offset::of)
                 .orElse(offset);
 
         log.debug("Offset set to {}", offset);

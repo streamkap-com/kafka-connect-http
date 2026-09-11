@@ -128,7 +128,23 @@ class HttpSourceTaskTest {
 
         task.start(emptyMap());
 
-        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetMap, "dummy-endpoint"));
+        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetMap));
+    }
+
+    @Test
+    void givenTaskInitializedWithRestoredOffset_whenStart_thenKeyIsNotOverwrittenByEndpoint() {
+
+        givenTaskConfiguration();
+        task.initialize(getContext(offsetMap));
+
+        task.start(emptyMap());
+
+        // The endpoint belongs to the partition, not the offset. Passing it into Offset.of's
+        // second argument puts the index name in the key slot, which silently changes what
+        // ${offset.key} means in a request template.
+        Map<String, Object> properties = new java.util.HashMap<>(task.getOffset().toMap());
+        assertThat(properties).containsEntry("key", Fixture.key);
+        assertThat(properties).doesNotContainValue("dummy-endpoint");
     }
 
     @Test
@@ -140,7 +156,7 @@ class HttpSourceTaskTest {
 
         task.start(emptyMap());
 
-        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetInitialMap, "dummy-endpoint"));
+        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetInitialMap));
     }
 
     @Test
@@ -266,7 +282,7 @@ class HttpSourceTaskTest {
         task.commitRecord(record(offsetMap(2)), null);
         task.commit();
 
-        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetMap(3), "dummy-endpoint"));
+        assertThat(task.getOffset()).isEqualTo(Offset.of(offsetMap(3)));
     }
 
     @Test
@@ -300,7 +316,7 @@ class HttpSourceTaskTest {
         String key = "customKey";
         Map<String, Object> offsetMap = ImmutableMap.of("custom", "value", "key", key, "timestamp", now.toString());
         Map<String, String> offsetInitialMap = ImmutableMap.of("k2", "v2");
-        Offset offset = Offset.of(offsetMap, "dummy-endpoint");
+        Offset offset = Offset.of(offsetMap);
         HttpRequest request = HttpRequest.builder().build();
         HttpResponse response = HttpResponse.builder().build();
 
