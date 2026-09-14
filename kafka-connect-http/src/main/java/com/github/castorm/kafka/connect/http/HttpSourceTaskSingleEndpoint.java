@@ -127,6 +127,8 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
         List<SourceRecord> records = responseParser.parse(endpoint, response);
 
+        sourceLag.setCaughtUp(records.isEmpty());
+
         List<SourceRecord> unseenRecords = recordSorter.sort(records).stream()
                 .filter(recordFilterFactory.create(offset))
                 .collect(toList());
@@ -142,6 +144,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         try {
             return requestExecutor.execute(request);
         } catch (IOException e) {
+            sourceLag.setCaughtUp(false);
             throw new RetriableException(e);
         }
     }

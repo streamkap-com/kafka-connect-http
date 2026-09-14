@@ -47,6 +47,36 @@ class SourceLagTest {
     }
 
     @Test
+    void whenCaughtUp_thenNotBehindEvenWithAnOldCursor() {
+        Instant threeHoursAgo = Instant.now().minusSeconds(10800);
+        SourceLag lag = new SourceLag("source_abc", "orders", () -> Optional.of(threeHoursAgo));
+
+        lag.setCaughtUp(true);
+
+        assertThat(lag.getMilliSecondsBehindSource()).isZero();
+    }
+
+    @Test
+    void whenCaughtUpButNoCursorYet_thenStillUnknown() {
+        SourceLag lag = new SourceLag("source_abc", "orders", Optional::empty);
+
+        lag.setCaughtUp(true);
+
+        assertThat(lag.getMilliSecondsBehindSource()).isEqualTo(-1L);
+    }
+
+    @Test
+    void whenMoreDataArrivesAfterBeingCaughtUp_thenBehindAgain() {
+        Instant tenMinutesAgo = Instant.now().minusSeconds(600);
+        SourceLag lag = new SourceLag("source_abc", "orders", () -> Optional.of(tenMinutesAgo));
+
+        lag.setCaughtUp(true);
+        lag.setCaughtUp(false);
+
+        assertThat(lag.getMilliSecondsBehindSource()).isBetween(600_000L, 610_000L);
+    }
+
+    @Test
     void whenOffsetTimestampIsInTheFuture_thenNeverNegative() {
         Instant later = Instant.now().plusSeconds(60);
         SourceLag lag = new SourceLag("source_abc", "orders", () -> Optional.of(later));

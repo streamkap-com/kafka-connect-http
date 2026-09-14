@@ -59,6 +59,8 @@ public class SourceLag implements SourceLagMBean {
 
     private final Supplier<Optional<Instant>> offsetTimestamp;
 
+    private volatile boolean caughtUp = false;
+
     private ObjectName registeredName;
 
     public SourceLag(String connectorName, String endpoint, Supplier<Optional<Instant>> offsetTimestamp) {
@@ -71,9 +73,27 @@ public class SourceLag implements SourceLagMBean {
     public long getMilliSecondsBehindSource() {
         // Read through to the live offset on every call - it is replaced on each commit, so the
         // value is always current without needing anything to push updates.
-        return offsetTimestamp.get()
-                .map(timestamp -> Math.max(0L, System.currentTimeMillis() - timestamp.toEpochMilli()))
-                .orElse(UNKNOWN);
+        Optional<Instant> timestamp = offsetTimestamp.get();
+        if (!timestamp.isPresent()) {
+            return UNKNOWN;
+        }
+        // A drained endpoint is not behind. Without this, a source that is quiet - hourly batches,
+        // business hours only - reports an ever-growing `now - cursor` and trips the lag alert while
+        // perfectly healthy. A polling source can tell idle from stuck (the response came back with
+        // nothing), which is why this needs no synthetic traffic the way a log reader does.
+        if (caughtUp) {
+            return 0L;
+        }
+        return Math.max(0L, System.currentTimeMillis() - timestamp.get().toEpochMilli());
+    }
+
+    /**
+     * Records whether the last response drained the endpoint. Set from the total the API returned,
+     * not from what survived the offset filter: a full page of already-seen records means the cursor
+     * has not yet caught up with what was read, which is still behind.
+     */
+    public void setCaughtUp(boolean caughtUp) {
+        this.caughtUp = caughtUp;
     }
 
     /**
