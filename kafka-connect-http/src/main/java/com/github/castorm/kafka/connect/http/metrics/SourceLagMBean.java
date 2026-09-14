@@ -30,4 +30,12 @@ public interface SourceLagMBean {
      * task has no offset timestamp yet.
      */
     long getMilliSecondsBehindSource();
+
+    /**
+     * Milliseconds since a request last came back, or -1 before the first one. Independent of how
+     * much data the source carries, so unlike a record-rate signal it reads the same for a busy
+     * endpoint and a quiet one. This is what separates "nothing to fetch" from "no longer fetching":
+     * once a drained endpoint reports zero lag, this is the only thing left that still moves.
+     */
+    long getMilliSecondsSinceLastPoll();
 }

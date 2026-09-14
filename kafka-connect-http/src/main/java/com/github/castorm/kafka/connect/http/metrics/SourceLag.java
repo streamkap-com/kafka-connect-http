@@ -61,6 +61,8 @@ public class SourceLag implements SourceLagMBean {
 
     private volatile boolean caughtUp = false;
 
+    private volatile long lastPollMillis = -1L;
+
     private ObjectName registeredName;
 
     public SourceLag(String connectorName, String endpoint, Supplier<Optional<Instant>> offsetTimestamp) {
@@ -88,12 +90,27 @@ public class SourceLag implements SourceLagMBean {
     }
 
     /**
-     * Records whether the last response drained the endpoint. Set from the total the API returned,
-     * not from what survived the offset filter: a full page of already-seen records means the cursor
-     * has not yet caught up with what was read, which is still behind.
+     * Records a completed request and whether it drained the endpoint. Drained-ness comes from the
+     * total the API returned, not from what survived the offset filter: a full page of already-seen
+     * records means the cursor has not yet caught up with what was read, which is still behind.
      */
-    public void setCaughtUp(boolean caughtUp) {
-        this.caughtUp = caughtUp;
+    public void pollCompleted(boolean drained) {
+        this.caughtUp = drained;
+        this.lastPollMillis = System.currentTimeMillis();
+    }
+
+    /**
+     * A request that never came back is not a completed poll, so the last-poll clock deliberately
+     * keeps running - repeated failures show up as a climbing value rather than a frozen one.
+     */
+    public void pollFailed() {
+        this.caughtUp = false;
+    }
+
+    @Override
+    public long getMilliSecondsSinceLastPoll() {
+        long last = lastPollMillis;
+        return last < 0 ? UNKNOWN : Math.max(0L, System.currentTimeMillis() - last);
     }
 
     /**

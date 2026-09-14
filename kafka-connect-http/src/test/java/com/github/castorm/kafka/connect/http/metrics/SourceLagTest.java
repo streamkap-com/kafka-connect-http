@@ -51,7 +51,7 @@ class SourceLagTest {
         Instant threeHoursAgo = Instant.now().minusSeconds(10800);
         SourceLag lag = new SourceLag("source_abc", "orders", () -> Optional.of(threeHoursAgo));
 
-        lag.setCaughtUp(true);
+        lag.pollCompleted(true);
 
         assertThat(lag.getMilliSecondsBehindSource()).isZero();
     }
@@ -60,7 +60,7 @@ class SourceLagTest {
     void whenCaughtUpButNoCursorYet_thenStillUnknown() {
         SourceLag lag = new SourceLag("source_abc", "orders", Optional::empty);
 
-        lag.setCaughtUp(true);
+        lag.pollCompleted(true);
 
         assertThat(lag.getMilliSecondsBehindSource()).isEqualTo(-1L);
     }
@@ -70,10 +70,37 @@ class SourceLagTest {
         Instant tenMinutesAgo = Instant.now().minusSeconds(600);
         SourceLag lag = new SourceLag("source_abc", "orders", () -> Optional.of(tenMinutesAgo));
 
-        lag.setCaughtUp(true);
-        lag.setCaughtUp(false);
+        lag.pollCompleted(true);
+        lag.pollCompleted(false);
 
         assertThat(lag.getMilliSecondsBehindSource()).isBetween(600_000L, 610_000L);
+    }
+
+    @Test
+    void whenNeverPolled_thenTimeSinceLastPollIsUnknown() {
+        SourceLag lag = new SourceLag("source_abc", "orders", Optional::empty);
+
+        assertThat(lag.getMilliSecondsSinceLastPoll()).isEqualTo(-1L);
+    }
+
+    @Test
+    void whenPollCompletes_thenTimeSinceLastPollResets() {
+        SourceLag lag = new SourceLag("source_abc", "orders", Optional::empty);
+
+        lag.pollCompleted(true);
+
+        assertThat(lag.getMilliSecondsSinceLastPoll()).isBetween(0L, 5_000L);
+    }
+
+    @Test
+    void whenPollFails_thenTimeSinceLastPollKeepsRunning() throws Exception {
+        SourceLag lag = new SourceLag("source_abc", "orders", Optional::empty);
+        lag.pollCompleted(true);
+        Thread.sleep(20);
+
+        lag.pollFailed();
+
+        assertThat(lag.getMilliSecondsSinceLastPoll()).isGreaterThanOrEqualTo(20L);
     }
 
     @Test
