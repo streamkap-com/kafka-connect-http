@@ -45,7 +45,10 @@ import lombok.extern.slf4j.Slf4j;
 public class HttpSourceTask extends SourceTask {
     private final Function<Map<String, String>, HttpSourceConnectorConfig> configFactory;
 
-    private Map<String, HttpSourceTaskSingleEndpoint> tasks = new HashMap<>();
+    // Populated in start() on the task thread, then read by the producer callback thread through
+    // commitRecord() and by the offset-committer thread through commit(). Never reassigned, so final
+    // is enough: final-field semantics publish the contents safely to those threads without a lock.
+    private final Map<String, HttpSourceTaskSingleEndpoint> tasks = new HashMap<>();
 
     HttpSourceTask(Function<Map<String, String>, HttpSourceConnectorConfig> configFactory) {
         this.configFactory = configFactory;
