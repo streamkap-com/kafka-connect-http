@@ -74,7 +74,12 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
     private ConfirmationWindow<Map<String, ?>> confirmationWindow = new ConfirmationWindow<>(emptyList());
 
     @Getter
-    private Offset offset;
+    // Written by the task thread in start() and by the offset-committer thread in commit(), read by
+    // both of those and by the JMX thread behind the lag metric. Volatile gives those reads a
+    // happens-before edge on the last write; a single writer at a time means nothing stronger is
+    // needed. Not related to the offsets Connect persists - those travel on the records poll()
+    // returns - this is only the cursor used to build the next request.
+    private volatile Offset offset;
 
     @Setter
     @Getter
@@ -104,7 +109,8 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         recordFilterFactory = config.getRecordFilterFactory();
         offset = loadOffset(this.context, config.getInitialOffset());
 
-        // ENG-2661. Reads the live offset on each scrape, so no updates need pushing.
+        // ENG-2661. Reads the offset field on each scrape rather than being pushed updates.
+        // The field is volatile, which is what makes a scrape see the last committed value.
         sourceLag = new SourceLag(settings.get("name"), endpoint, () -> offset.getTimestamp());
         sourceLag.register();
     }
