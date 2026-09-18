@@ -25,6 +25,7 @@ import com.github.castorm.kafka.connect.http.client.spi.HttpClient;
 import com.github.castorm.kafka.connect.http.model.HttpRequest;
 import com.github.castorm.kafka.connect.http.model.HttpResponse;
 import com.github.castorm.kafka.connect.http.model.Offset;
+import com.github.castorm.kafka.connect.http.metrics.SourceLag;
 import com.github.castorm.kafka.connect.http.model.Partition;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordFilterFactory;
 import com.github.castorm.kafka.connect.http.record.spi.SourceRecordSorter;
@@ -73,11 +74,18 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
     private ConfirmationWindow<Map<String, ?>> confirmationWindow = new ConfirmationWindow<>(emptyList());
 
     @Getter
-    private Offset offset;
+    // Written by the task thread in start() and by the offset-committer thread in commit(), read by
+    // both of those and by the JMX thread behind the lag metric. Volatile gives those reads a
+    // happens-before edge on the last write; a single writer at a time means nothing stronger is
+    // needed. Not related to the offsets Connect persists - those travel on the records poll()
+    // returns - this is only the cursor used to build the next request.
+    private volatile Offset offset;
 
     @Setter
     @Getter
     private String endpoint;
+
+    private SourceLag sourceLag;
 
     HttpSourceTaskSingleEndpoint(String endpoint, Function<Map<String, String>, HttpSourceConnectorConfig> configFactory) {
         this.configFactory = configFactory;
@@ -100,13 +108,18 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         recordSorter = config.getRecordSorter();
         recordFilterFactory = config.getRecordFilterFactory();
         offset = loadOffset(this.context, config.getInitialOffset());
+
+        // ENG-2661. Reads the offset field on each scrape rather than being pushed updates.
+        // The field is volatile, which is what makes a scrape see the last committed value.
+        sourceLag = new SourceLag(settings.get("name"), endpoint, () -> offset.getTimestamp());
+        sourceLag.register();
     }
 
     private Offset loadOffset(SourceTaskContext context, Map<String, String> initialOffset) {
         Map<String, Object> restoredOffset = ofNullable(
             context.offsetStorageReader().offset(
                 Partition.getPartition(endpoint))).orElseGet(Collections::emptyMap);
-        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset, endpoint);
+        return Offset.of(!restoredOffset.isEmpty() ? restoredOffset : initialOffset);
     }
 
     @Override
@@ -119,6 +132,8 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         HttpResponse response = execute(request);
 
         List<SourceRecord> records = responseParser.parse(endpoint, response);
+
+        sourceLag.pollCompleted(records.isEmpty());
 
         List<SourceRecord> unseenRecords = recordSorter.sort(records).stream()
                 .filter(recordFilterFactory.create(offset))
@@ -135,6 +150,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
         try {
             return requestExecutor.execute(request);
         } catch (IOException e) {
+            sourceLag.pollFailed();
             throw new RetriableException(e);
         }
     }
@@ -151,7 +167,7 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     public void commit() {
         offset = confirmationWindow.getLowWatermarkOffset()
-                .map(props -> Offset.of(props, this.endpoint))
+                .map(Offset::of)
                 .orElse(offset);
 
         log.debug("Offset set to {}", offset);
@@ -159,7 +175,9 @@ public class HttpSourceTaskSingleEndpoint extends SourceTask {
 
     @Override
     public void stop() {
-        // Nothing to do, no resources to release
+        if (sourceLag != null) {
+            sourceLag.unregister();
+        }
     }
 
     public String version() {
